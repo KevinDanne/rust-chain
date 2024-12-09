@@ -1,0 +1,8 @@
+[package]
+name = "rust-chain-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rust-chain-blockchain = { path = "../rust-chain-blockchain" }
+rust-chain-network = { path = "../rust-chain-network" }

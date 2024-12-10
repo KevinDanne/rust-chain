@@ -7,4 +7,4 @@ edition = "2021"
 uuid = { version = "1.11.0", features = ["v4"] }
 rand = "0.8.5"
 sha256 = "1.5.0"
-rsa = "0.9.7"
+rsa = { version = "0.9.7", features = ["pem"] }

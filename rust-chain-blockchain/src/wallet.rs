@@ -1,9 +1,8 @@
 use std::error::Error;
 use std::fmt::{self, Display};
 
-use rsa::pkcs1::EncodeRsaPublicKey;
 use uuid::Uuid;
-use rsa::{RsaPublicKey, RsaPrivateKey, pkcs8::{self, EncodePublicKey}};
+use rsa::{RsaPublicKey, RsaPrivateKey, pkcs1::{self, EncodeRsaPublicKey}, pkcs8::LineEnding};
 
 use crate::transaction::Transaction;
 
@@ -17,10 +16,10 @@ pub enum WalletCreationError {
 
 impl Display for WalletCreationError {
    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match self {
-        WalletCreationError::RsaError(err) => write!(f, "{}", err)?
-    };
-    Ok(()) 
+        match self {
+            WalletCreationError::RsaError(err) => write!(f, "{}", err)?
+        };
+        Ok(()) 
    } 
 }
 
@@ -29,6 +28,29 @@ impl Error for WalletCreationError {}
 impl From<rsa::Error> for WalletCreationError {
     fn from(value: rsa::Error) -> Self {
         Self::RsaError(value)
+    }
+}
+
+/// Represents an error enum for the creation of a new transaction
+#[derive(Debug)]
+pub enum TransactionCreationError {
+    PKCSError(pkcs1::Error)
+}
+
+impl Display for TransactionCreationError {
+   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TransactionCreationError::PKCSError(err) => write!(f, "{}", err)?
+        };
+        Ok(()) 
+   } 
+}
+
+impl Error for TransactionCreationError {}
+
+impl From<pkcs1::Error> for TransactionCreationError {
+    fn from(value: pkcs1::Error) -> Self {
+        Self::PKCSError(value)
     }
 }
 
@@ -57,12 +79,15 @@ impl Wallet {
     }
 
     /// Creates a new signed transaction
-    pub fn create_transaction(&self, receiver_hash: String, amount: f64) -> Transaction {
+    pub fn create_transaction(&self, receiver_public_key: &RsaPublicKey, amount: f64) -> Result<Transaction, TransactionCreationError> {
         let id = Uuid::new_v4();
-        // TODO REMOVE UNWRAP
-        let sender_hash = self.public_key.to_pkcs1_pem(pkcs8::LineEnding::CRLF).unwrap();
+
+        let receiver_hash = receiver_public_key.to_pkcs1_pem(LineEnding::CRLF)?;
+        let sender_hash = self.public_key.to_pkcs1_pem(LineEnding::CRLF)?;
+
         // TODO SIGNATURE
         let signature = String::new();
-        Transaction::new(id, sender_hash, receiver_hash, amount, signature)
+        
+        Ok(Transaction::new(id, sender_hash, receiver_hash, amount, signature))
     }
 }

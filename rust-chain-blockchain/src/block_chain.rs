@@ -13,8 +13,14 @@ impl BlockChain {
         }
     }
 
-    /// Adds a new block to the chain
+    /// Returns the blocks of the chain
+    pub fn blocks(&self) -> &Vec<Block> {
+        &self.blocks
+    }
+
+    /// Adds the given block to the chain
     pub fn add_block(&mut self, block: Block) {
+        // TODO verify block
         self.blocks.push(block);
     }
 }

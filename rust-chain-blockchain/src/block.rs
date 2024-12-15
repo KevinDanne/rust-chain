@@ -7,21 +7,19 @@ pub struct Block {
     id: Uuid,
     previous_id: Option<Uuid>,
     transactions: Vec<Transaction>,
-    proof_of_work_salt: Option<u32>,
-    proof_of_work_hash: Option<String>,
+    nounce: u32,
+    hash: String,
 }
 
 impl Block {
     /// Creates a new block instance
-    pub fn new(
-        previous_id: Option<Uuid>,
-    ) -> Self {
+    pub fn new(previous_id: Option<Uuid>) -> Self {
         Self {
             id: Uuid::new_v4(),
             previous_id,
             transactions: Vec::new(),
-            proof_of_work_salt: None,
-            proof_of_work_hash: None,
+            nounce: 0,
+            hash: String::new(),
         }
     }
 
@@ -40,19 +38,28 @@ impl Block {
         &self.transactions
     }
 
-    /// Returns the proof_of_work_salt of the block
-    pub fn proof_of_work_salt(&self) -> &Option<u32> {
-        &self.proof_of_work_salt
+    /// Returns the nounce of the block
+    pub fn nounce(&self) -> &u32 {
+        &self.nounce
     }
 
-    /// Returns the proof_of_work_hash of the block
-    pub fn proof_of_work_hash(&self) -> &Option<String> {
-        &self.proof_of_work_hash
+    /// Returns the hash of the block
+    pub fn hash(&self) -> &String {
+        &self.hash
+    }
+
+    /// Verifies is the block is valid
+    pub fn verify(&self) -> bool {
+        false
     }
 
     /// Adds the given transaction to the block
     pub fn add_transaction(&mut self, transaction: Transaction) {
-        // TODO verify transaction
         self.transactions.push(transaction);
+    }
+
+    /// Mines the block
+    pub fn mine(&mut self) {
+        self.nounce = 1;
     }
 }

@@ -1,26 +1,27 @@
-use std::error::Error;
-use std::fmt::{self, Display};
+use std::{
+    error::Error,
+    fmt::{self, Display},
+};
 
-use uuid::Uuid;
-use rsa::{RsaPublicKey, RsaPrivateKey, pkcs1::{self, EncodeRsaPublicKey}, pkcs8::LineEnding};
+use rsa::{RsaPrivateKey, RsaPublicKey};
 
-use crate::transaction::Transaction;
+use crate::transaction::{Transaction, TransactionCreationError};
 
 const PRIVATE_KEY_BIT_SIZE: usize = 2048;
 
 /// Represents an error enum for the creation of a new wallet
 #[derive(Debug)]
 pub enum WalletCreationError {
-    RsaError(rsa::Error)
+    RsaError(rsa::Error),
 }
 
 impl Display for WalletCreationError {
-   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            WalletCreationError::RsaError(err) => write!(f, "{}", err)?
+            WalletCreationError::RsaError(err) => write!(f, "{}", err)?,
         };
-        Ok(()) 
-   } 
+        Ok(())
+    }
 }
 
 impl Error for WalletCreationError {}
@@ -28,29 +29,6 @@ impl Error for WalletCreationError {}
 impl From<rsa::Error> for WalletCreationError {
     fn from(value: rsa::Error) -> Self {
         Self::RsaError(value)
-    }
-}
-
-/// Represents an error enum for the creation of a new transaction
-#[derive(Debug)]
-pub enum TransactionCreationError {
-    PKCSError(pkcs1::Error)
-}
-
-impl Display for TransactionCreationError {
-   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TransactionCreationError::PKCSError(err) => write!(f, "{}", err)?
-        };
-        Ok(()) 
-   } 
-}
-
-impl Error for TransactionCreationError {}
-
-impl From<pkcs1::Error> for TransactionCreationError {
-    fn from(value: pkcs1::Error) -> Self {
-        Self::PKCSError(value)
     }
 }
 
@@ -69,7 +47,7 @@ impl Wallet {
 
         Ok(Self {
             private_key,
-            public_key
+            public_key,
         })
     }
 
@@ -78,16 +56,13 @@ impl Wallet {
         &self.public_key
     }
 
-    /// Creates a new signed transaction
-    pub fn create_transaction(&self, receiver_public_key: &RsaPublicKey, amount: f64) -> Result<Transaction, TransactionCreationError> {
-        let id = Uuid::new_v4();
-
-        let receiver_hash = receiver_public_key.to_pkcs1_pem(LineEnding::CRLF)?;
-        let sender_hash = self.public_key.to_pkcs1_pem(LineEnding::CRLF)?;
-
-        // TODO SIGNATURE
-        let signature = String::new();
-        
-        Ok(Transaction::new(id, sender_hash, receiver_hash, amount, signature))
+    /// Creates a new transaction.
+    /// This is a wrapper around Transaction::new
+    pub fn create_transaction(
+        &self,
+        receiver: &Wallet,
+        amount: f64,
+    ) -> Result<Transaction, TransactionCreationError> {
+        Transaction::new(self, receiver, amount)
     }
 }

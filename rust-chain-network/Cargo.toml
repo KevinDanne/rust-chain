@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 rust-chain-blockchain = { path = "../rust-chain-blockchain" }
+thiserror = "2.0.7"
+serde = "1.0.216"

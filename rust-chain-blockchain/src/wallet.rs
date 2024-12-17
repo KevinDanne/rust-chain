@@ -51,6 +51,11 @@ impl Wallet {
         })
     }
 
+    /// Returns the private key of the user
+    pub fn private_key(&self) -> &RsaPrivateKey {
+        &self.private_key
+    }
+
     /// Returns the public key of the user
     pub fn public_key(&self) -> &RsaPublicKey {
         &self.public_key

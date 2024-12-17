@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 rust-chain-blockchain = { path = "../rust-chain-blockchain" }
 rust-chain-network = { path = "../rust-chain-network" }
+anathema = { git = "https://github.com/togglebyte/anathema", branch = "main" }

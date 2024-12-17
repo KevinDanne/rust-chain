@@ -1,12 +1,10 @@
 use std::{
     error::Error,
     fmt::{self, Display},
+    hash::{DefaultHasher, Hash, Hasher},
 };
 
-use rsa::{
-    pkcs1::{self, EncodeRsaPublicKey},
-    pkcs8::LineEnding,
-};
+use rsa::{pkcs1, Pkcs1v15Sign};
 use uuid::Uuid;
 
 use crate::wallet::Wallet;
@@ -14,16 +12,18 @@ use crate::wallet::Wallet;
 /// Represents an error enum for the creation and verification of a transaction
 #[derive(Debug)]
 pub enum TransactionCreationError {
-    InvalidSenderSignature,
+    SameReceiverAndSender,
+    RsaError(rsa::Error),
     PKCSError(pkcs1::Error),
 }
 
 impl Display for TransactionCreationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TransactionCreationError::InvalidSenderSignature => {
-                write!(f, "Receiver signature is invalid")?
+            Self::SameReceiverAndSender => {
+                write!(f, "Receiver and sender signature MUST be different")?
             }
+            Self::RsaError(err) => write!(f, "{}", err)?,
             Self::PKCSError(err) => write!(f, "{}", err)?,
         };
         Ok(())
@@ -31,6 +31,12 @@ impl Display for TransactionCreationError {
 }
 
 impl Error for TransactionCreationError {}
+
+impl From<rsa::Error> for TransactionCreationError {
+    fn from(value: rsa::Error) -> Self {
+        Self::RsaError(value)
+    }
+}
 
 impl From<pkcs1::Error> for TransactionCreationError {
     fn from(value: pkcs1::Error) -> Self {
@@ -40,10 +46,10 @@ impl From<pkcs1::Error> for TransactionCreationError {
 /// Represents a transaction
 pub struct Transaction {
     id: Uuid,
-    sender_hash: String,
-    receiver_hash: String,
+    sender_hash: u64,
+    receiver_hash: u64,
     amount: f64,
-    signature: String,
+    signature: Vec<u8>,
 }
 
 impl Transaction {
@@ -55,17 +61,27 @@ impl Transaction {
     ) -> Result<Self, TransactionCreationError> {
         let id = Uuid::new_v4();
 
-        let receiver_hash = receiver.public_key().to_pkcs1_pem(LineEnding::CRLF)?;
-        let sender_hash = sender.public_key().to_pkcs1_pem(LineEnding::CRLF)?;
+        if receiver.public_key() == sender.public_key() {
+            return Err(TransactionCreationError::SameReceiverAndSender);
+        }
 
-        // TODO SIGNATURE
-        let signature = String::new();
+        let mut hasher = DefaultHasher::new();
+        sender.private_key().hash(&mut hasher);
+        let sender_hash = hasher.finish();
 
-        // TODO add verify
+        hasher = DefaultHasher::new();
+        receiver.private_key().hash(&mut hasher);
+        let receiver_hash = hasher.finish();
+
+        let signature_data = format!("{}{}{}", sender_hash, receiver_hash, amount);
+        let signature = sender
+            .private_key()
+            .sign(Pkcs1v15Sign::new_unprefixed(), signature_data.as_bytes())?;
+
         Ok(Self {
             id,
-            sender_hash: sender_hash.into(),
-            receiver_hash: receiver_hash.into(),
+            sender_hash,
+            receiver_hash,
             amount,
             signature,
         })
@@ -77,12 +93,12 @@ impl Transaction {
     }
 
     /// Returns the sender hash of the transaction
-    pub fn sender_hash(&self) -> &String {
+    pub fn sender_hash(&self) -> &u64 {
         &self.sender_hash
     }
 
     /// Returns the receiver hash of the transaction
-    pub fn receiver_hash(&self) -> &String {
+    pub fn receiver_hash(&self) -> &u64 {
         &self.receiver_hash
     }
 
@@ -92,7 +108,7 @@ impl Transaction {
     }
 
     /// Returns the signature of the transaction
-    pub fn signature(&self) -> &String {
+    pub fn signature(&self) -> &Vec<u8> {
         &self.signature
     }
 }

@@ -1,35 +1,15 @@
-use std::{
-    error::Error,
-    fmt::{self, Display},
-};
-
 use rsa::{RsaPrivateKey, RsaPublicKey};
+use thiserror::Error;
 
 use crate::transaction::{Transaction, TransactionCreationError};
 
 const PRIVATE_KEY_BIT_SIZE: usize = 2048;
 
 /// Represents an error enum for the creation of a new wallet
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum WalletCreationError {
-    RsaError(rsa::Error),
-}
-
-impl Display for WalletCreationError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            WalletCreationError::RsaError(err) => write!(f, "{}", err)?,
-        };
-        Ok(())
-    }
-}
-
-impl Error for WalletCreationError {}
-
-impl From<rsa::Error> for WalletCreationError {
-    fn from(value: rsa::Error) -> Self {
-        Self::RsaError(value)
-    }
+    #[error(transparent)]
+    RsaError(#[from] rsa::Error),
 }
 
 /// Represents a user wallet

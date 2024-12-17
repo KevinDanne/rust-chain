@@ -1,48 +1,24 @@
-use std::{
-    error::Error,
-    fmt::{self, Display},
-    hash::{DefaultHasher, Hash, Hasher},
-};
+use std::hash::{DefaultHasher, Hash, Hasher};
 
 use rsa::{pkcs1, Pkcs1v15Sign};
+use thiserror::Error;
 use uuid::Uuid;
 
 use crate::wallet::Wallet;
 
 /// Represents an error enum for the creation and verification of a transaction
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum TransactionCreationError {
+    #[error("Receiver and sender signature MUST be different")]
     SameReceiverAndSender,
-    RsaError(rsa::Error),
-    PKCSError(pkcs1::Error),
+
+    #[error(transparent)]
+    RsaError(#[from] rsa::Error),
+
+    #[error(transparent)]
+    PKCSError(#[from] pkcs1::Error),
 }
 
-impl Display for TransactionCreationError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::SameReceiverAndSender => {
-                write!(f, "Receiver and sender signature MUST be different")?
-            }
-            Self::RsaError(err) => write!(f, "{}", err)?,
-            Self::PKCSError(err) => write!(f, "{}", err)?,
-        };
-        Ok(())
-    }
-}
-
-impl Error for TransactionCreationError {}
-
-impl From<rsa::Error> for TransactionCreationError {
-    fn from(value: rsa::Error) -> Self {
-        Self::RsaError(value)
-    }
-}
-
-impl From<pkcs1::Error> for TransactionCreationError {
-    fn from(value: pkcs1::Error) -> Self {
-        Self::PKCSError(value)
-    }
-}
 /// Represents a transaction
 pub struct Transaction {
     id: Uuid,
